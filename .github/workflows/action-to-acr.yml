@@ -3,9 +3,9 @@ name: Build and Push to ACR
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
-    branches: [main]
+    branches: [master]
     types: [opened, synchronize, reopened]
 
 jobs:

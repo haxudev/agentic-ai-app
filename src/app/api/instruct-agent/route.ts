@@ -25,6 +25,15 @@ export async function POST(req: NextRequest) {
 
     // Get the selected tool and system prompt
     const selectedTool = await getToolById(tool);
+    if (!selectedTool) {
+      return new Response(
+        JSON.stringify({ error: 'Selected tool not found' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
     console.log(`Selected tool: ${selectedTool.name}, System Prompt:`, systemPrompt);
     
     // Check if prompt contains document context

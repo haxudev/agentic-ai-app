@@ -174,7 +174,7 @@ export default function InstructAgentPage() {
     }
   };
 
-  const loadSystemPromptForTool = useCallback(async (tool: Tool, options?: { refresh?: boolean }) => {
+  const loadSystemPromptForTool = useCallback(async (tool: ToolDefinition | null, options?: { refresh?: boolean }) => {
     if (!tool) return;
     const isCurrent = selectedToolRef.current === tool.id;
     if (isCurrent) {

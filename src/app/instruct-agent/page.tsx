@@ -11,6 +11,7 @@ import { models } from '@/lib/instruct-agent/models';
 import type { ToolDefinition } from '@/lib/instruct-agent/tools-service';
 import { extractTextFromFile } from '@/lib/instruct-agent/file-parser';
 import { useSidebar } from '@/components/SidebarContext';
+import CustomSelect from '@/components/CustomSelect';
 
 interface CodeProps {
   node?: any;
@@ -680,39 +681,28 @@ export default function InstructAgentPage() {
         )}
 
         <div className="flex flex-1 gap-4 min-h-0">
-          <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-indigo-100/50 shadow-lg shadow-indigo-100/20 flex flex-col w-1/3 relative overflow-hidden min-h-0">
+          <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-4 border border-indigo-100/50 shadow-lg shadow-indigo-100/20 flex flex-col w-1/3 relative min-h-0">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 z-0"></div>
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-indigo-400/10 to-transparent rounded-full blur-2xl"></div>
             
             {/* 卡片头部 - 工具选择下拉列表作为标题 */}
-            <div className="flex items-center justify-between mb-3 relative z-10 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3 relative z-50 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-icons-outlined text-indigo-500 text-lg">build</span>
-                <div className="relative group">
-                  <select
-                    value={selectedTool?.id ?? ''}
-                    onChange={handleToolChange}
-                    disabled={isLoadingTools || tools.length === 0}
-                    className="appearance-none bg-transparent hover:bg-indigo-50/50 border-none pl-1 pr-6 py-1 text-sm font-bold text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Select tool"
-                    title="Select tool"
-                  >
-                    {tools.length === 0 ? (
-                      <option value="">{isLoadingTools ? '加载工具中...' : '无可用工具'}</option>
-                    ) : (
-                      tools.map(tool => (
-                        <option key={tool.id} value={tool.id}>
-                          {tool.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center text-indigo-400 group-hover:text-indigo-600 transition-colors">
-                    <svg className="fill-current h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                    </svg>
-                  </div>
-                </div>
+                <CustomSelect
+                  value={selectedTool?.id ?? ''}
+                  onChange={(value) => {
+                    const tool = tools.find(t => t.id === value) ?? null;
+                    setPromptError(null);
+                    setSelectedTool(tool);
+                  }}
+                  options={tools.length === 0 
+                    ? [{ value: '', label: isLoadingTools ? '加载工具中...' : '无可用工具' }]
+                    : tools.map(tool => ({ value: tool.id, label: tool.name }))
+                  }
+                  disabled={isLoadingTools || tools.length === 0}
+                  placeholder="选择工具..."
+                />
                 
                 {/* 加载状态和错误提示 - 放在下拉列表旁边 */}
                 {isPromptLoading && (
@@ -753,26 +743,14 @@ export default function InstructAgentPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 z-0 pointer-events-none"></div>
             <div className="border-b border-indigo-100/60 px-4 py-3 bg-gradient-to-r from-slate-50/80 to-indigo-50/50 backdrop-blur-sm flex justify-between items-center relative z-10 flex-shrink-0">
               {/* 模型选择下拉列表作为标题 */}
-              <div className="relative group flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <span className="material-icons-outlined text-indigo-500 text-lg">smart_toy</span>
-                <select
+                <CustomSelect
                   value={selectedModel.id}
-                  onChange={(e) => setSelectedModel(models.find(m => m.id === e.target.value) || models[0])}
-                  className="appearance-none bg-transparent hover:bg-indigo-50/50 border-none px-1 py-1 pr-7 text-sm font-bold text-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all duration-200 cursor-pointer"
-                  aria-label="Select model"
-                  title="Select model"
-                >
-                  {models.map(model => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 flex items-center text-indigo-400 group-hover:text-indigo-600 transition-colors">
-                  <svg className="fill-current h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                  </svg>
-                </div>
+                  onChange={(value) => setSelectedModel(models.find(m => m.id === value) || models[0])}
+                  options={models.map(model => ({ value: model.id, label: model.name }))}
+                  placeholder="选择模型..."
+                />
               </div>
               
               {/* 清空按钮 */}

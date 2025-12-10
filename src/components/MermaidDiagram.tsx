@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import mermaid from 'mermaid';
 
 interface MermaidDiagramProps {
@@ -8,89 +8,46 @@ interface MermaidDiagramProps {
   className?: string;
 }
 
-// 初始化 mermaid 配置
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'base',
-  themeVariables: {
-    // 主题颜色配置 - 使用 indigo/blue 色系
-    primaryColor: '#818cf8',
-    primaryTextColor: '#1e293b',
-    primaryBorderColor: '#6366f1',
-    lineColor: '#94a3b8',
-    secondaryColor: '#c7d2fe',
-    tertiaryColor: '#e0e7ff',
-    // 背景
-    background: '#ffffff',
-    mainBkg: '#f8fafc',
-    // 文字
-    textColor: '#334155',
-    // 节点
-    nodeBorder: '#6366f1',
-    clusterBkg: '#f1f5f9',
-    clusterBorder: '#cbd5e1',
-    // 连接线
-    edgeLabelBackground: '#ffffff',
-    // 序列图
-    actorBorder: '#6366f1',
-    actorBkg: '#e0e7ff',
-    actorTextColor: '#1e293b',
-    actorLineColor: '#94a3b8',
-    signalColor: '#334155',
-    signalTextColor: '#1e293b',
-    labelBoxBkgColor: '#f8fafc',
-    labelBoxBorderColor: '#cbd5e1',
-    labelTextColor: '#334155',
-    loopTextColor: '#334155',
-    noteBorderColor: '#6366f1',
-    noteBkgColor: '#e0e7ff',
-    noteTextColor: '#1e293b',
-    // 状态图
-    labelColor: '#334155',
-    altBackground: '#f1f5f9',
-    // 饼图
-    pie1: '#818cf8',
-    pie2: '#60a5fa',
-    pie3: '#34d399',
-    pie4: '#fbbf24',
-    pie5: '#f472b6',
-    pie6: '#a78bfa',
-    pie7: '#22d3d8',
-    pieStrokeColor: '#ffffff',
-    pieStrokeWidth: '2px',
-    pieOpacity: '0.9',
-    pieTitleTextColor: '#1e293b',
-    pieSectionTextColor: '#ffffff',
-    pieLegendTextColor: '#334155',
-  },
-  flowchart: {
-    htmlLabels: true,
-    curve: 'basis',
-    padding: 15,
-  },
-  sequence: {
-    diagramMarginX: 15,
-    diagramMarginY: 15,
-    actorMargin: 60,
-    boxMargin: 10,
-    boxTextMargin: 5,
-    noteMargin: 10,
-    messageMargin: 35,
-  },
-  fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  fontSize: 14,
-  securityLevel: 'loose',
-});
+// 标记是否已初始化
+let isInitialized = false;
 
-// 生成唯一 ID
-let mermaidIdCounter = 0;
-const generateMermaidId = () => `mermaid-diagram-${++mermaidIdCounter}-${Date.now()}`;
+// 初始化 mermaid 配置 (只执行一次)
+const initMermaid = () => {
+  if (isInitialized) return;
+  
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'default',
+    securityLevel: 'loose',
+    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+    },
+    sequence: {
+      diagramMarginX: 15,
+      diagramMarginY: 15,
+      actorMargin: 60,
+    },
+    themeVariables: {
+      primaryColor: '#818cf8',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#6366f1',
+      lineColor: '#94a3b8',
+      secondaryColor: '#c7d2fe',
+      tertiaryColor: '#e0e7ff',
+    },
+  });
+  
+  isInitialized = true;
+};
 
 export default function MermaidDiagram({ chart, className = '' }: MermaidDiagramProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const uniqueId = useId().replace(/:/g, '-');
 
   useEffect(() => {
     const renderDiagram = async () => {
@@ -104,12 +61,16 @@ export default function MermaidDiagram({ chart, className = '' }: MermaidDiagram
       setError(null);
 
       try {
+        // 确保 mermaid 已初始化
+        initMermaid();
+        
         // 清理 chart 内容
-        const cleanedChart = chart
+        let cleanedChart = chart
           .trim()
           .replace(/\\n/g, '\n')  // 处理转义的换行符
           .replace(/^\s*```mermaid\s*/i, '')  // 移除可能的 markdown 代码块标记
-          .replace(/\s*```\s*$/, '');
+          .replace(/\s*```\s*$/, '')
+          .trim();
 
         if (!cleanedChart) {
           setIsLoading(false);
@@ -117,22 +78,54 @@ export default function MermaidDiagram({ chart, className = '' }: MermaidDiagram
           return;
         }
 
-        const id = generateMermaidId();
+        // 修复常见的语法问题
+        // 1. 确保图表类型声明在第一行
+        const lines = cleanedChart.split('\n').filter(line => line.trim());
+        const firstLine = lines[0]?.trim().toLowerCase() || '';
         
-        // 直接渲染，mermaid.render 会在语法错误时抛出异常
+        // 检测图表类型
+        const validTypes = ['graph', 'flowchart', 'sequencediagram', 'sequence', 'classDiagram', 'class', 
+                          'stateDiagram', 'state', 'erDiagram', 'er', 'gantt', 'pie', 'journey',
+                          'gitgraph', 'mindmap', 'timeline', 'sankey', 'quadrantchart', 'xychart'];
+        
+        const hasValidType = validTypes.some(type => 
+          firstLine.startsWith(type.toLowerCase()) || 
+          firstLine.startsWith(type)
+        );
+        
+        // 如果没有有效的图表类型，尝试添加 flowchart TD
+        if (!hasValidType) {
+          // 检查是否看起来像流程图语法
+          if (cleanedChart.includes('-->') || cleanedChart.includes('---') || cleanedChart.includes('==>')) {
+            cleanedChart = 'flowchart TD\n' + cleanedChart;
+          }
+        }
+        
+        // 2. 标准化图表类型声明
+        cleanedChart = cleanedChart
+          .replace(/^graph\s+(TB|TD|BT|RL|LR)\s*/im, 'flowchart $1\n')
+          .replace(/^sequenceDiagram\s*/im, 'sequenceDiagram\n')
+          .replace(/^classDiagram\s*/im, 'classDiagram\n')
+          .replace(/^stateDiagram(-v2)?\s*/im, 'stateDiagram-v2\n')
+          .replace(/^erDiagram\s*/im, 'erDiagram\n');
+
+        const id = `mermaid-${uniqueId}-${Date.now()}`;
+        
+        // 渲染图表
         const { svg: renderedSvg } = await mermaid.render(id, cleanedChart);
         setSvg(renderedSvg);
         setIsLoading(false);
       } catch (err) {
         console.error('Mermaid rendering error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to render diagram');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to render diagram';
+        setError(errorMessage);
         setSvg('');
         setIsLoading(false);
       }
     };
 
     renderDiagram();
-  }, [chart]);
+  }, [chart, uniqueId]);
 
   if (isLoading) {
     return (
@@ -150,17 +143,17 @@ export default function MermaidDiagram({ chart, className = '' }: MermaidDiagram
 
   if (error) {
     return (
-      <div className={`p-4 bg-red-50 rounded-xl border border-red-200 ${className}`}>
-        <div className="flex items-start gap-2 text-red-600">
+      <div className={`p-4 bg-amber-50 rounded-xl border border-amber-200 ${className}`}>
+        <div className="flex items-start gap-2 text-amber-700">
           <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <div>
-            <p className="text-sm font-medium">图表渲染失败</p>
-            <p className="text-xs text-red-500 mt-1">{error}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">图表语法需要修正</p>
             <details className="mt-2">
-              <summary className="text-xs cursor-pointer hover:text-red-700">查看源码</summary>
-              <pre className="mt-2 p-2 bg-red-100 rounded text-xs overflow-x-auto whitespace-pre-wrap">{chart}</pre>
+              <summary className="text-xs cursor-pointer hover:text-amber-800">查看详情</summary>
+              <p className="text-xs text-amber-600 mt-1 break-words">{error}</p>
+              <pre className="mt-2 p-2 bg-amber-100 rounded text-xs overflow-x-auto whitespace-pre-wrap font-mono">{chart}</pre>
             </details>
           </div>
         </div>

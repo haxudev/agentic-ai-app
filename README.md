@@ -18,20 +18,10 @@
 
 ### Azure Static Web Apps (SWA)
 
-本仓库已支持 SWA 单资源部署：
-- 前端：Next.js static export（构建输出到 `out/`）
-- 后端：SWA 内置 Azure Functions（位于 `api/`，对外路由为 `/api/*`）
-
-创建 SWA 时建议配置：
-- `app_location`: `/`
-- `api_location`: `api`
-- `output_location`: `out`
-- `app_build_command`: `npm run build`
-
-需要在 SWA 的 Application Settings 中配置：
-- `GITHUB_TOKEN`（必需）
-- `GITHUB_MODEL_ENDPOINT`（可选，默认 `https://models.github.ai/inference`）
-- `GITHUB_TOOLS_GIST_ID`（可选）
+本项目采用 SWA 单资源部署架构：
+- **前端**：Next.js static export（`output: 'export'`，构建输出到 `out/`）
+- **后端**：SWA 内置 Azure Functions（`api/`，Node.js 20，对外路由 `/api/*`）
+- **部署**：使用 `@azure/static-web-apps-cli` 一键部署（详见下方部署指南）
 
 ---
 
@@ -162,35 +152,66 @@ vercel
 
 ### ✅ Azure Static Web Apps
 
-> ⚠️ **注意**: Azure SWA 对 Next.js App Router + Edge Runtime 的支持有限。推荐使用 Azure Container Apps 或 Azure Web App。
+本项目已适配 Azure Static Web Apps 单资源部署架构：
+- **前端**：Next.js static export → `out/`
+- **后端**：SWA 内置 Azure Functions → `api/`
 
-**方案 A: 使用 Azure SWA (实验性)**
-
-1. 在 Azure Portal 创建 Static Web App
-2. 连接 GitHub 仓库
-3. 配置环境变量 (`GITHUB_TOKEN`)
-4. 使用 `staticwebapp.config.json` (已包含)
-
-**方案 B: 使用 Azure Container Apps (推荐)**
+#### 一键部署脚本
 
 ```bash
-# 构建 Docker 镜像
-docker build -t agentic-ai-app .
+# 变量配置（按需修改）
+SWA_NAME="instructs-agent"
+RG="haxuapps"
+LOCATION="East Asia"
 
-# 推送到 Azure Container Registry
-az acr login --name <your-acr>
-docker tag agentic-ai-app <your-acr>.azurecr.io/agentic-ai-app:latest
-docker push <your-acr>.azurecr.io/agentic-ai-app:latest
+# 1. 创建 SWA 资源（仅首次）
+az staticwebapp create \
+  --name "$SWA_NAME" \
+  --resource-group "$RG" \
+  --location "$LOCATION" \
+  --sku Free
 
-# 部署到 Container Apps
-az containerapp create \
-  --name agentic-ai-app \
-  --resource-group <your-rg> \
-  --environment <your-env> \
-  --image <your-acr>.azurecr.io/agentic-ai-app:latest \
-  --target-port 3000 \
-  --ingress external \
-  --env-vars GITHUB_TOKEN=<your-token>
+# 2. 获取部署令牌
+DEPLOY_TOKEN=$(az staticwebapp secrets list \
+  --name "$SWA_NAME" \
+  --resource-group "$RG" \
+  --query "properties.apiKey" -o tsv)
+
+# 3. 构建
+npm run build
+
+# 4. 复制 SWA 配置到输出目录
+cp staticwebapp.config.json out/
+
+# 5. 部署到 production
+npx @azure/static-web-apps-cli deploy \
+  --app-location ./out \
+  --api-location ./api \
+  --api-language node \
+  --api-version 20 \
+  --env production \
+  --deployment-token "$DEPLOY_TOKEN"
+```
+
+#### 部署后配置
+
+在 Azure Portal → Static Web App → **Configuration** → **Application settings** 中添加：
+
+| 变量名 | 必需 | 说明 |
+|--------|------|------|
+| `GITHUB_TOKEN` | ✅ | GitHub Personal Access Token |
+| `GITHUB_MODEL_ENDPOINT` | ❌ | 默认 `https://models.github.ai/inference` |
+| `GITHUB_TOOLS_GIST_ID` | ❌ | 工具/提示词配置 Gist ID |
+
+或使用 CLI 批量设置：
+
+```bash
+az staticwebapp appsettings set \
+  --name "$SWA_NAME" \
+  --resource-group "$RG" \
+  --setting-names \
+    GITHUB_TOKEN="<your-token>" \
+    GITHUB_MODEL_ENDPOINT="https://models.github.ai/inference"
 ```
 
 ---

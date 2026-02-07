@@ -13,13 +13,10 @@
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://models.github.ai https://api.github.com https://*.openai.azure.com https://*.mcpservers.org https://mcp.deepwiki.com https://export.arxiv.org",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://models.github.ai https://api.github.com https://*.openai.azure.com https://*.mcpservers.org https://mcp.deepwiki.com https://export.arxiv.org",
     "Referrer-Policy": "strict-origin-when-cross-origin"
   },
   "platform": {
     "apiRuntime": "node:20"
-  },
-  "build": {
-    "skipGithubActionWorkflowGeneration": true
   }
 }

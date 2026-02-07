@@ -53,6 +53,23 @@ docker run -p 3000:3000 --env-file .env agentic-ai-app
 
 支持部署到 Azure Web App / Container Apps。
 
+### Azure Static Web Apps (SWA)
+
+本仓库已支持 SWA 单资源部署：
+- 前端：Next.js static export（构建输出到 `out/`）
+- 后端：SWA 内置 Azure Functions（位于 `api/`，对外路由为 `/api/*`）
+
+创建 SWA 时建议配置：
+- `app_location`: `/`
+- `api_location`: `api`
+- `output_location`: `out`
+- `app_build_command`: `npm run build`
+
+需要在 SWA 的 Application Settings 中配置：
+- `GITHUB_TOKEN`（必需）
+- `GITHUB_MODEL_ENDPOINT`（可选，默认 `https://models.github.ai/inference`）
+- `GITHUB_TOOLS_GIST_ID`（可选）
+
 ---
 
 **Vibe Coding** — 人机协作，迭代交付 🚀

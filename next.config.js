@@ -7,6 +7,10 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Azure Static Web Apps: static export (no Next.js server)
+  output: 'export',
+  trailingSlash: true,
   // Move from experimental.serverComponentsExternalPackages to top-level serverExternalPackages
   serverExternalPackages: ['sharp'],
   eslint: {

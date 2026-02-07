@@ -459,94 +459,17 @@ export default function InstructAgentPage() {
         throw new Error(`Server responded with ${response.status}: ${await response.text()}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
-
-      // 流式处理逻辑
-      const decoder = new TextDecoder();
-      let accumulatedContent = '';
-      let accumulatedStream = ''; // 用于积累SSE片段
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        // 解码当前块并添加到累积的流数据中
-        const chunk = decoder.decode(value, { stream: true });
-        accumulatedStream += chunk;
-        
-        // 处理完整的SSE消息
-        const messages = accumulatedStream.split('\n\n');
-        // 保留最后一个可能不完整的消息用于下一次迭代
-        accumulatedStream = messages.pop() || '';
-        
-        // 处理所有完整的消息
-        for (const message of messages) {
-          if (message.trim() && message.startsWith('data: ')) {
-            const content = message.replace(/^data: /, '');
-            try {
-              // 尝试解析JSON内容
-              const parsedContent = JSON.parse(content);
-              
-              // 处理错误消息
-              if (parsedContent.error) {
-                setError(parsedContent.error);
-                setMessages(prev => prev.slice(0, -1)); // 移除助手的消息
-                setIsLoading(false);
-                return;
-              }
-              
-              // 处理 MCP 工具调用状态
-              if (parsedContent.type === 'tool_call') {
-                const { serverId, toolName, status, preview, error: toolError } = parsedContent;
-                setActiveToolCalls(prev => {
-                  // 查找是否已存在该工具调用
-                  const existingIndex = prev.findIndex(
-                    tc => tc.serverId === serverId && tc.toolName === toolName
-                  );
-                  
-                  const newStatus: MCPToolCallStatus = {
-                    serverId,
-                    toolName,
-                    status,
-                    preview,
-                    error: toolError,
-                  };
-                  
-                  if (existingIndex >= 0) {
-                    // 更新现有状态
-                    const updated = [...prev];
-                    updated[existingIndex] = newStatus;
-                    return updated;
-                  } else {
-                    // 添加新状态
-                    return [...prev, newStatus];
-                  }
-                });
-                continue;
-              }
-              
-              // 处理警告消息
-              if (parsedContent.type === 'warning') {
-                console.warn('[MCP Warning]', parsedContent.message);
-                continue;
-              }
-              
-              // 处理正常的字符串内容
-              if (typeof parsedContent === 'string') {
-                accumulatedContent += parsedContent;
-                updateAssistantMessage(assistantMessageId, accumulatedContent);
-              }
-            } catch (e) {
-              // 非JSON内容，直接使用
-              accumulatedContent += content;
-              updateAssistantMessage(assistantMessageId, accumulatedContent);
-            }
-          }
-        }
-        // After updates, ensure we're scrolled to bottom
-        scrollToBottom();
+      const data = await response.json().catch(() => null);
+      if (!data) {
+        throw new Error('Invalid JSON response');
       }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const content = typeof data.content === 'string' ? data.content : '';
+      updateAssistantMessage(assistantMessageId, content);
     } catch (error) {
       console.error('Error:', error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');

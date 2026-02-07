@@ -1,0 +1,10 @@
+{
+  "name": "agentic-ai-app-api",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "dependencies": {
+    "@azure/functions": "^4.7.0",
+    "openai": "^4.87.3"
+  }
+}

@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       {/* Note: In Next.js App Router, you don't need Head component.
        * Instead, metadata is handled via the metadata export above.
        * For custom link tags, you can add them directly to the html or body tag. */}

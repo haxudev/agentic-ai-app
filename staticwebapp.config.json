@@ -1,11 +1,25 @@
 {
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": [
-      "/api/*"
-    ]
+    "exclude": ["/_next/*", "/api/*", "*.{css,js,json,svg,png,ico,jpg,jpeg,gif,webp,woff,woff2}"]
+  },
+  "routes": [
+    {
+      "route": "/api/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://models.github.ai https://api.github.com https://*.openai.azure.com https://*.mcpservers.org https://mcp.deepwiki.com https://export.arxiv.org",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
   },
   "platform": {
     "apiRuntime": "node:20"
+  },
+  "build": {
+    "skipGithubActionWorkflowGeneration": true
   }
 }

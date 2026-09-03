@@ -351,3 +351,6 @@ export const MCP_SERVERS: MCPServerConfig[] = [
 <p align="center">
   <strong>Vibe Coding</strong> — 人机协作，迭代交付 🚀
 </p>
+
+
+<!-- Security scan triggered at 2026-09-03 23:11:49 -->
